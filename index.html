@@ -1,130 +1,221 @@
-import { useEffect, useState } from "react";
-import { initializeApp } from "firebase/app";
-import {
-  getFirestore,
-  collection,
-  onSnapshot,
-  doc,
-  updateDoc
-} from "firebase/firestore";
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎴 Amigo Secreto por Cartas</title>
+  <style>
+    :root {
+      --bg1: #021a12;
+      --bg2: #0b3d2e;
+      --cardFront: linear-gradient(135deg, #b30000, #6d0000);
+      --cardBack: #111827;
+      --text: #ffffff;
+      --muted: #a7f3d0;
+    }
 
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle, var(--bg2), var(--bg1));
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      padding: 30px 20px 50px;
+    }
+
+    h1 {
+      margin-bottom: 6px;
+      font-size: 2rem;
+    }
+
+    p {
+      margin-top: 0;
+      opacity: 0.9;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 18px;
+      justify-items: center;
+      margin-top: 40px;
+    }
+
+    .card {
+      width: 90px;
+      height: 130px;
+      background: var(--cardFront);
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 14px rgba(0,0,0,.45);
+      transition: transform .3s, box-shadow .3s, opacity .3s;
+      user-select: none;
+    }
+
+    .card:hover {
+      transform: scale(1.08);
+      box-shadow: 0 12px 24px rgba(0,0,0,.6);
+    }
+
+    .card.picked {
+      background: var(--cardBack);
+      cursor: not-allowed;
+      opacity: 0.45;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .result {
+      margin-top: 30px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      animation: fadeIn .6s ease;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 13px;
+      opacity: 0.65;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+  <div id="loginBox">
+    <h1>🎄 Amigo Secreto</h1>
+    <p>Digite seu nome para continuar</p>
+
+    <input id="nomeInput" placeholder="Ex: Vini" style="padding:12px;border-radius:10px;border:none;width:80%;max-width:280px;font-size:1rem;text-align:center;" />
+    <br><br>
+    <button onclick="login()" style="padding:12px 24px;border:none;border-radius:12px;background:#16a34a;color:white;font-size:1rem;cursor:pointer">Entrar</button>
+    <br><br>
+    <button onclick="trocarUsuario()" style="padding:8px 18px;border:none;border-radius:10px;background:#374151;color:white;font-size:.9rem;cursor:pointer">Trocar pessoa</button>
+    <p style="margin-top:20px;opacity:.7;font-size:.9rem">Não se preocupe com maiúsculas ou acentos 😉</p>
+
+    <div class="grid" id="grid" style="display:none"></div>
+
+    <div class="result" id="result"></div>
+
+  </div>
+
+    <footer>
+      Boa sorte 🍀<br />
+      Este sorteio funciona 100% no navegador.
+    </footer>
+  </div>
+
+<script>
 /* ===============================
-   CONFIGURAÇÃO DO FIREBASE
+   CONFIGURAÇÃO LOCAL (GitHub Pages)
    =============================== */
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_APP_ID
-};
+const EVENT_KEY = 'cartas_evento_demo';
+const DEVICE_KEY = EVENT_KEY + '_usuarios';
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Nomes de exemplo (você pode trocar ou depois integrar com seu sistema de eventos)
+const nomesPadrao = [
+  'Alan','Dani','Vini','Alani','Vanda','Geraldo','Lourdes','André','Vânia','Cássia','Anderson','Liz'
+];
 
-/* ===============================
-   COMPONENTE PRINCIPAL
-   =============================== */
-export default function Home() {
-  const [cards, setCards] = useState([]);
-
-  useEffect(() => {
-    return onSnapshot(collection(db, "cards"), snapshot => {
-      setCards(snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })));
-    });
-  }, []);
-
-  const pickCard = async (card) => {
-    if (card.picked) return;
-    await updateDoc(doc(db, "cards", card.id), { picked: true });
-    alert(`🎁 Seu amigo secreto é:\n\n${card.name}`);
-  };
-
-  return (
-    <>
-      <style jsx global>{`
-        body {
-          margin: 0;
-          font-family: Arial, sans-serif;
-          background: radial-gradient(circle, #0b3d2e, #021a12);
-          color: #fff;
-          text-align: center;
-        }
-      `}</style>
-
-      <style jsx>{`
-        .container {
-          padding: 40px 20px;
-        }
-
-        h1 {
-          margin-bottom: 5px;
-        }
-
-        p {
-          opacity: 0.9;
-        }
-
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, 90px);
-          gap: 18px;
-          justify-content: center;
-          margin-top: 40px;
-        }
-
-        .card {
-          width: 90px;
-          height: 130px;
-          background: linear-gradient(135deg, #b30000, #6d0000);
-          border-radius: 10px;
-          cursor: pointer;
-          font-size: 42px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 6px 12px rgba(0,0,0,.4);
-          transition: transform .3s, box-shadow .3s;
-        }
-
-        .card:hover {
-          transform: scale(1.08);
-          box-shadow: 0 10px 20px rgba(0,0,0,.6);
-        }
-
-        footer {
-          margin-top: 40px;
-          font-size: 13px;
-          opacity: 0.6;
-        }
-      `}</style>
-
-      <div className="container">
-        <h1>🎄 Amigo Secreto – Natal 2025</h1>
-        <p>Escolha uma carta. Apenas uma chance.</p>
-
-        <div className="grid">
-          {cards.map(card =>
-            !card.picked && (
-              <div
-                key={card.id}
-                className="card"
-                onClick={() => pickCard(card)}
-              >
-                🎴
-              </div>
-            )
-          )}
-        </div>
-
-        <footer>
-          Boa sorte 🍀
-        </footer>
-      </div>
-    </>
-  );
+function initEvento() {
+  if (!localStorage.getItem(EVENT_KEY)) {
+    const embaralhado = [...nomesPadrao].sort(() => Math.random() - 0.5);
+    const cartas = embaralhado.map((nome, i) => ({
+      nome,
+      amigo: embaralhado[(i + 1) % embaralhado.length],
+      pickedBy: null
+    }));
+    localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+  }
+  if (!localStorage.getItem(DEVICE_KEY)) {
+    localStorage.setItem(DEVICE_KEY, JSON.stringify({}));
+  }
 }
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
+  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
+  const usuarioAtual = usuarios.atual;
+
+  cartas.forEach((c, idx) => {
+    const div = document.createElement('div');
+    const jaEscolheu = usuarios[usuarioAtual];
+    div.className = 'card' + (c.pickedBy ? ' picked' : '');
+    div.textContent = '🎴';
+
+    div.onclick = () => pickCard(idx);
+
+    if (jaEscolheu || c.pickedBy) {
+      div.style.pointerEvents = 'none';
+      div.style.opacity = 0.4;
+    }
+
+    grid.appendChild(div);
+  });
+}
+
+function pickCard(index) {
+  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
+  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
+  const usuarioAtual = usuarios.atual;
+
+  if (usuarios[usuarioAtual]) {
+    alert('Este nome já escolheu uma carta neste celular.');
+    return;
+  }
+
+  const carta = cartas[index];
+  if (carta.pickedBy) return;
+
+  carta.pickedBy = usuarioAtual;
+  usuarios[usuarioAtual] = carta.amigo;
+
+  localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+  localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
+
+  const result = document.getElementById('result');
+  result.innerHTML = `🎁 <b>${usuarioAtual}</b>, seu amigo secreto é:<br><span style="color:#a7f3d0">${carta.amigo}</span>`;
+
+  render();
+}
+
+  const carta = cartas[index];
+  if (carta.picked) return;
+
+  carta.picked = true;
+  localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+  localStorage.setItem(EVENT_KEY + '_escolheu', 'true');
+
+  const result = document.getElementById('result');
+  result.innerHTML = `🎁 Seu amigo secreto é:<br><span style="color:#a7f3d0">${carta.amigo}</span>`;
+
+  render();
+}
+
+initEvento();
+render();
+</script>
+</body>
+</html>
