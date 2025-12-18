@@ -1,188 +1,150 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Amigo Secreto</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎄 Amigo Secreto</title>
 
-<style>
-body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:radial-gradient(circle,#0b3d2e,#021a12);
-  color:#fff;
-  text-align:center;
-}
-.container{padding:40px 20px;}
-.grid{
-  display:none;
-  grid-template-columns:repeat(auto-fill,90px);
-  gap:18px;
-  justify-content:center;
-  margin-top:40px;
-}
-.card{
-  width:90px;height:130px;
-  background:linear-gradient(135deg,#b30000,#6d0000);
-  border-radius:10px;
-  cursor:pointer;
-  font-size:42px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  box-shadow:0 6px 12px rgba(0,0,0,.4);
-}
-input,button{
-  padding:12px;
-  font-size:16px;
-  border-radius:10px;
-  border:none;
-}
-button{
-  background:#16a34a;
-  color:#fff;
-  cursor:pointer;
-}
-</style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle, #0b3d2e, #021a12);
+      color: #fff;
+      text-align: center;
+    }
+    .box {
+      max-width: 400px;
+      margin: 40px auto;
+      background: rgba(0,0,0,0.35);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+    }
+    button {
+      background: #b30000;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background: #8f0000; }
+    .hidden { display: none; }
+    ul { text-align: left; }
+  </style>
 </head>
-
 <body>
-<div class="container" id="loginBox">
-  <h1>🎄 Amigo Secreto</h1>
+
+<div class="box" id="loginBox">
+  <h2>🎄 Amigo Secreto</h2>
   <p>Digite seu nome</p>
-  <input id="nomeInput" placeholder="Seu nome">
-  <br><br>
-  <button id="btnEntrar" type="button">Entrar</button>
+  <input id="nomeInput" placeholder="Ex: Vini" />
+  <button onclick="entrar()">Entrar</button>
 </div>
 
-<div class="grid" id="grid"></div>
-<div id="result"></div>
+<div class="box hidden" id="sorteioBox">
+  <h2>🎁 Seu amigo secreto é:</h2>
+  <h1 id="resultado"></h1>
+</div>
+
+<div class="box hidden" id="adminBox">
+  <h2>🔐 ADMIN</h2>
+  <button onclick="resetar()">Resetar Evento</button>
+  <h3>Status</h3>
+  <ul id="lista"></ul>
+</div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-
-const EVENT_KEY = 'evento_amigo_secreto';
-const USERS_KEY = 'usuarios_usados';
-const ADMIN = 'viniciusadm';
-
-const nomes = [
- 'Alan','Dani','Vini','Alani','Vanda','Geraldo',
- 'Lourdes','André','Vânia','Cássia','Anderson','Liz'
-];
-
-const alias = {};
-nomes.forEach(n=>{
-  alias[n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')] = n;
-});
-alias['vinicius'] = 'Vini';
-
-function normalizar(t){
- return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-}
-
-function gerarDerangement(lista){
- let arr;
- do{
-  arr=[...lista].sort(()=>Math.random()-0.5);
- }while(arr.some((v,i)=>v===lista[i]));
- return arr;
-}
-
-function init(){
- if(!localStorage.getItem(EVENT_KEY)){
-  const amigos = gerarDerangement(nomes);
-  const cartas = nomes.map((n,i)=>({nome:n,amigo:amigos[i],pickedBy:null}));
-  localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
- }
- if(!localStorage.getItem(USERS_KEY)){
-  localStorage.setItem(USERS_KEY,JSON.stringify({}));
- }
-}
-
-function login(){
- const valor = document.getElementById('nomeInput').value;
- if(!valor){ alert('Digite seu nome'); return; }
-
- const nome = normalizar(valor);
-
- if(nome === ADMIN){
-  abrirAdmin();
-  return;
- }
-
- if(!alias[nome]){
-  alert('Nome não reconhecido');
-  return;
- }
-
- const nomeReal = alias[nome];
- const usados = JSON.parse(localStorage.getItem(USERS_KEY));
-
- if(usados[nomeReal]){
-  alert('Esse nome já foi usado');
-  return;
- }
-
- window.usuarioAtual = nomeReal;
- document.getElementById('grid').style.display='grid';
- document.getElementById('loginBox').style.display='none';
- render();
-}
-
-function render(){
- const grid=document.getElementById('grid');
- grid.innerHTML='';
- const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
- cartas.forEach((c,i)=>{
-  if(c.pickedBy) return;
-  const d=document.createElement('div');
-  d.className='card';
-  d.textContent='🎴';
-  d.onclick=()=>pick(i);
-  grid.appendChild(d);
- });
-}
-
-function pick(i){
- const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
- const usados=JSON.parse(localStorage.getItem(USERS_KEY));
- const c=cartas[i];
- if(c.pickedBy) return;
-
- c.pickedBy=window.usuarioAtual;
- usados[window.usuarioAtual]=true;
-
- localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
- localStorage.setItem(USERS_KEY,JSON.stringify(usados));
-
- document.getElementById('grid').style.display='none';
- document.getElementById('result').innerHTML=
-  `🎁 <b>${window.usuarioAtual}</b>, seu amigo secreto é:<br><b>${c.amigo}</b>`;
-}
-
-function abrirAdmin(){
- const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
- let html='<h2>Admin</h2>';
- cartas.forEach(c=>{
-  html+=`<p>${c.nome} → ${c.pickedBy?c.amigo:'❌'}</p>`;
- });
- html+=`<br><button onclick="resetar()">Resetar tudo</button>`;
- document.getElementById('loginBox').innerHTML=html;
-}
-
-window.resetar=()=>{
- localStorage.clear();
- location.reload();
+// 🔥 CONFIG FIREBASE (SUBSTITUA PELO SEU)
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_AUTH_DOMAIN",
+  projectId: "SEU_PROJECT_ID"
 };
 
-document.getElementById('btnEntrar').addEventListener('click',login);
-document.getElementById('btnEntrar').addEventListener('touchstart',e=>{
- e.preventDefault();
- login();
-});
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-init();
-});
+const NOMES = [
+  'Alan','Dani','Vini','Alani','Vanda','Geraldo',
+  'Lourdes','André','Vânia','Cássia','Anderson','Liz'
+];
+
+const ADMIN = 'viniciusadm';
+
+function normalizar(nome) {
+  return nome.trim().toLowerCase();
+}
+
+async function entrar() {
+  const nomeDigitado = normalizar(document.getElementById('nomeInput').value);
+  if (!nomeDigitado) return alert('Digite um nome');
+
+  if (nomeDigitado === ADMIN) {
+    document.getElementById('loginBox').classList.add('hidden');
+    document.getElementById('adminBox').classList.remove('hidden');
+    carregarAdmin();
+    return;
+  }
+
+  const ref = db.collection('usuarios').doc(nomeDigitado);
+  const docSnap = await ref.get();
+
+  if (docSnap.exists) {
+    alert('Esse nome já foi usado.');
+    return;
+  }
+
+  const disponiveisSnap = await db.collection('usuarios').get();
+  const usados = disponiveisSnap.docs.map(d => d.data().tirou);
+
+  const opcoes = NOMES.filter(n =>
+    normalizar(n) !== nomeDigitado && !usados.includes(n)
+  );
+
+  if (opcoes.length === 0) {
+    alert('Erro no sorteio');
+    return;
+  }
+
+  const sorteado = opcoes[Math.floor(Math.random() * opcoes.length)];
+
+  await ref.set({ tirou: sorteado });
+
+  document.getElementById('loginBox').classList.add('hidden');
+  document.getElementById('sorteioBox').classList.remove('hidden');
+  document.getElementById('resultado').innerText = sorteado;
+}
+
+async function carregarAdmin() {
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+  const snap = await db.collection('usuarios').get();
+  snap.forEach(d => {
+    const li = document.createElement('li');
+    li.innerText = `${d.id} ➜ ${d.data().tirou}`;
+    lista.appendChild(li);
+  });
+}
+
+async function resetar() {
+  if (!confirm('Resetar tudo?')) return;
+  const snap = await db.collection('usuarios').get();
+  snap.forEach(d => d.ref.delete());
+  alert('Evento resetado');
+  carregarAdmin();
+}
 </script>
+
 </body>
 </html>
