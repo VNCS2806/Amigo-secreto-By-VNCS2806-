@@ -235,26 +235,36 @@ function render(){
 }
 
 function pickCard(i){
-  const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
-  const usuarios=JSON.parse(localStorage.getItem(DEVICE_KEY));
-  const pessoa=usuarios.atual;
+  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
+  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
+  const pessoa = usuarios.atual;
 
   if(!pessoa) return;
 
-  cartas[i].pickedBy=pessoa;
+  // evita escolher carta já usada
+  if(cartas[i].pickedBy) return;
+
+  cartas[i].pickedBy = pessoa;
+  const amigo = cartas[i].amigo;
+
+  // mostra resultado da pessoa atual
+  document.getElementById('result').innerHTML = `🎁 <b>${pessoa}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${amigo}</span>`;
 
   usuarios.index++;
+
   if(usuarios.index < usuarios.lista.length){
     usuarios.atual = usuarios.lista[usuarios.index];
-    alert('Agora é a vez de '+usuarios.atual);
+    setTimeout(()=>{
+      alert('Agora é a vez de ' + usuarios.atual);
+      document.getElementById('result').innerHTML = '';
+    }, 100);
   } else {
     localStorage.setItem(DEVICE_LOCK,'true');
     document.getElementById('grid').style.display='none';
-    document.getElementById('result').innerHTML='🎁 Sorteio concluído!';
   }
 
-  localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
-  localStorage.setItem(DEVICE_KEY,JSON.stringify(usuarios));
+  localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+  localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
   render();
 }
 
