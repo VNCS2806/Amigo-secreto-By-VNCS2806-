@@ -1,267 +1,188 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎴 Amigo Secreto por Cartas</title>
-  <style>
-    :root {
-      --bg1: #021a12;
-      --bg2: #0b3d2e;
-      --cardFront: linear-gradient(135deg, #b30000, #6d0000);
-      --cardBack: #111827;
-      --text: #ffffff;
-      --muted: #a7f3d0;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amigo Secreto</title>
 
-    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle, var(--bg2), var(--bg1));
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 900px;
-      padding: 30px 20px 50px;
-    }
-
-    h1 {
-      margin-bottom: 6px;
-      font-size: 2rem;
-    }
-
-    p {
-      margin-top: 0;
-      opacity: 0.9;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 18px;
-      justify-items: center;
-      margin-top: 40px;
-    }
-
-    .card {
-      width: 90px;
-      height: 130px;
-      background: var(--cardFront);
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 42px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 14px rgba(0,0,0,.45);
-      transition: transform .3s, box-shadow .3s, opacity .3s;
-      user-select: none;
-    }
-
-    .card:hover {
-      transform: scale(1.08);
-      box-shadow: 0 12px 24px rgba(0,0,0,.6);
-    }
-
-    .card.picked {
-      background: var(--cardBack);
-      cursor: not-allowed;
-      opacity: 0.45;
-      transform: none;
-      box-shadow: none;
-    }
-
-    .result {
-      margin-top: 30px;
-      font-size: 1.4rem;
-      font-weight: bold;
-      animation: fadeIn .6s ease;
-    }
-
-    footer {
-      margin-top: 40px;
-      font-size: 13px;
-      opacity: 0.65;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:radial-gradient(circle,#0b3d2e,#021a12);
+  color:#fff;
+  text-align:center;
+}
+.container{padding:40px 20px;}
+.grid{
+  display:none;
+  grid-template-columns:repeat(auto-fill,90px);
+  gap:18px;
+  justify-content:center;
+  margin-top:40px;
+}
+.card{
+  width:90px;height:130px;
+  background:linear-gradient(135deg,#b30000,#6d0000);
+  border-radius:10px;
+  cursor:pointer;
+  font-size:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 6px 12px rgba(0,0,0,.4);
+}
+input,button{
+  padding:12px;
+  font-size:16px;
+  border-radius:10px;
+  border:none;
+}
+button{
+  background:#16a34a;
+  color:#fff;
+  cursor:pointer;
+}
+</style>
 </head>
+
 <body>
-  <div class="container">
+<div class="container" id="loginBox">
+  <h1>🎄 Amigo Secreto</h1>
+  <p>Digite seu nome</p>
+  <input id="nomeInput" placeholder="Seu nome">
+  <br><br>
+  <button id="btnEntrar" type="button">Entrar</button>
+</div>
 
-  <div id="loginBox">
-    <h1>🎄 Amigo Secreto</h1>
-    <p>Digite seu nome para continuar</p>
-
-    <input id="nomeInput" placeholder="Ex: Vini" style="padding:12px;border-radius:10px;border:none;width:80%;max-width:280px;font-size:1rem;text-align:center;" />
-    <br><br>
-    <button type="button" id="btnEntrar">Entrar</button>
-    <br><br>
-    <button type="button" onclick="trocarUsuario()" style="padding:8px 18px;border:none;border-radius:10px;background:#374151;color:white;font-size:.9rem;cursor:pointer">Trocar pessoa</button>
-    <p style="margin-top:20px;opacity:.7;font-size:.9rem">Não se preocupe com maiúsculas ou acentos 😉</p>
-
-    <div class="grid" id="grid" style="display:none"></div>
-
-    <div class="result" id="result"></div>
-
-  </div>
-
-    <footer>
-      Boa sorte 🍀<br />
-      Este sorteio funciona 100% no navegador.
-    </footer>
-  </div>
+<div class="grid" id="grid"></div>
+<div id="result"></div>
 
 <script>
-/**********************
- * SCRIPT LIMPO E FUNCIONAL
- * BLOQUEIO APENAS POR NOME
- **********************/
-const EVENT_KEY = 'cartas_evento_demo';
-const USERS_KEY = EVENT_KEY + '_usuarios_usados';
-const ADMIN_USER = 'viniciusadm';
+document.addEventListener('DOMContentLoaded', () => {
 
-const nomesPadrao = [
-  'Alan','Dani','Vini','Alani','Vanda','Geraldo','Lourdes','André','Vânia','Cássia','Anderson','Liz'
+const EVENT_KEY = 'evento_amigo_secreto';
+const USERS_KEY = 'usuarios_usados';
+const ADMIN = 'viniciusadm';
+
+const nomes = [
+ 'Alan','Dani','Vini','Alani','Vanda','Geraldo',
+ 'Lourdes','André','Vânia','Cássia','Anderson','Liz'
 ];
 
-const mapaNomes = {
-  alan:'Alan',
-  dani:'Dani', daniel:'Dani',
-  vini:'Vini', vinicius:'Vini',
-  alani:'Alani',
-  vanda:'Vanda',
-  lourdes:'Lourdes',
-  geraldo:'Geraldo',
-  andre:'André',
-  vania:'Vânia',
-  cassia:'Cássia',
-  anderson:'Anderson',
-  liz:'Liz'
-};
+const alias = {};
+nomes.forEach(n=>{
+  alias[n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')] = n;
+});
+alias['vinicius'] = 'Vini';
 
-function normalizar(txt){
-  return txt.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+function normalizar(t){
+ return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 }
 
 function gerarDerangement(lista){
-  let arr = [...lista];
-  let valido = false;
-  while(!valido){
-    arr.sort(()=>Math.random()-0.5);
-    valido = arr.every((v,i)=>v !== lista[i]);
-  }
-  return arr;
+ let arr;
+ do{
+  arr=[...lista].sort(()=>Math.random()-0.5);
+ }while(arr.some((v,i)=>v===lista[i]));
+ return arr;
 }
 
-function initEvento(){
-  if(!localStorage.getItem(EVENT_KEY)){
-    const amigos = gerarDerangement(nomesPadrao);
-    const cartas = nomesPadrao.map((n,i)=>({
-      nome: n,
-      amigo: amigos[i],
-      pickedBy: null
-    }));
-    localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
-  }
-  if(!localStorage.getItem(USERS_KEY)){
-    localStorage.setItem(USERS_KEY, JSON.stringify({}));
-  }
+function init(){
+ if(!localStorage.getItem(EVENT_KEY)){
+  const amigos = gerarDerangement(nomes);
+  const cartas = nomes.map((n,i)=>({nome:n,amigo:amigos[i],pickedBy:null}));
+  localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
+ }
+ if(!localStorage.getItem(USERS_KEY)){
+  localStorage.setItem(USERS_KEY,JSON.stringify({}));
+ }
 }
-    localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
-  }
-  if(!localStorage.getItem(USERS_KEY)){
-    localStorage.setItem(USERS_KEY, JSON.stringify({}));
-  }
-}
-
-document.getElementById('btnEntrar').addEventListener('click', login);
-document.getElementById('btnEntrar').addEventListener('touchstart', function(e){ e.preventDefault(); login(); });
 
 function login(){
-  const valor = document.getElementById('nomeInput').value;
-  if(!valor){ alert('Digite seu nome'); return; }
+ const valor = document.getElementById('nomeInput').value;
+ if(!valor){ alert('Digite seu nome'); return; }
 
-  const nome = normalizar(valor);
+ const nome = normalizar(valor);
 
-  if(nome === ADMIN_USER){ abrirAdmin(); return; }
+ if(nome === ADMIN){
+  abrirAdmin();
+  return;
+ }
 
-  if(!mapaNomes[nome]){ alert('Nome não reconhecido'); return; }
+ if(!alias[nome]){
+  alert('Nome não reconhecido');
+  return;
+ }
 
-  const nomeReal = mapaNomes[nome];
-  const usados = JSON.parse(localStorage.getItem(USERS_KEY));
+ const nomeReal = alias[nome];
+ const usados = JSON.parse(localStorage.getItem(USERS_KEY));
 
-  if(usados[nomeReal]){ alert('Esse nome já foi usado.'); return; }
+ if(usados[nomeReal]){
+  alert('Esse nome já foi usado');
+  return;
+ }
 
-  window.usuarioAtual = nomeReal;
-  document.getElementById('grid').style.display='grid';
-  document.getElementById('result').innerHTML='';
-  render();
+ window.usuarioAtual = nomeReal;
+ document.getElementById('grid').style.display='grid';
+ document.getElementById('loginBox').style.display='none';
+ render();
 }
 
 function render(){
-  const grid = document.getElementById('grid');
-  grid.innerHTML='';
-  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
-
-  cartas.forEach((c,i)=>{
-    if(c.pickedBy) return;
-    const div = document.createElement('div');
-    div.className='card';
-    div.textContent='🎴';
-    div.onclick = ()=>pickCard(i);
-    grid.appendChild(div);
-  });
+ const grid=document.getElementById('grid');
+ grid.innerHTML='';
+ const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
+ cartas.forEach((c,i)=>{
+  if(c.pickedBy) return;
+  const d=document.createElement('div');
+  d.className='card';
+  d.textContent='🎴';
+  d.onclick=()=>pick(i);
+  grid.appendChild(d);
+ });
 }
 
-function pickCard(i){
-  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
-  const usados = JSON.parse(localStorage.getItem(USERS_KEY));
+function pick(i){
+ const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
+ const usados=JSON.parse(localStorage.getItem(USERS_KEY));
+ const c=cartas[i];
+ if(c.pickedBy) return;
 
-  const carta = cartas[i];
-  if(carta.pickedBy) return;
+ c.pickedBy=window.usuarioAtual;
+ usados[window.usuarioAtual]=true;
 
-  carta.pickedBy = window.usuarioAtual;
-  usados[window.usuarioAtual] = true;
+ localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
+ localStorage.setItem(USERS_KEY,JSON.stringify(usados));
 
-  localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
-  localStorage.setItem(USERS_KEY, JSON.stringify(usados));
-
-  document.getElementById('grid').style.display='none';
-  document.getElementById('result').innerHTML = `🎁 <b>${window.usuarioAtual}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${carta.amigo}</span>`;
+ document.getElementById('grid').style.display='none';
+ document.getElementById('result').innerHTML=
+  `🎁 <b>${window.usuarioAtual}</b>, seu amigo secreto é:<br><b>${c.amigo}</b>`;
 }
 
 function abrirAdmin(){
-  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
-  let html = '<h2>🔐 Administração</h2>';
-  html += '<div style="text-align:left;max-width:520px;margin:20px auto">';
-  cartas.forEach(c=>{
-    html += `<p><b>${c.nome}</b> → ${c.pickedBy ? c.amigo + ' (tirado por ' + c.pickedBy + ')' : '❌ ainda não tirou'}</p>`;
-  });
-  html += '</div>';
-  html += '<button onclick="resetarEvento()" style="padding:12px 22px;border:none;border-radius:10px;background:#b91c1c;color:white;font-size:1rem;cursor:pointer">Resetar evento</button>';
-  document.getElementById('loginBox').innerHTML = html;
+ const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
+ let html='<h2>Admin</h2>';
+ cartas.forEach(c=>{
+  html+=`<p>${c.nome} → ${c.pickedBy?c.amigo:'❌'}</p>`;
+ });
+ html+=`<br><button onclick="resetar()">Resetar tudo</button>`;
+ document.getElementById('loginBox').innerHTML=html;
 }
 
-function resetarEvento(){
-  localStorage.removeItem(EVENT_KEY);
-  localStorage.removeItem(USERS_KEY);
-  location.reload();
-}
+window.resetar=()=>{
+ localStorage.clear();
+ location.reload();
+};
 
-initEvento();
+document.getElementById('btnEntrar').addEventListener('click',login);
+document.getElementById('btnEntrar').addEventListener('touchstart',e=>{
+ e.preventDefault();
+ login();
+});
+
+init();
+});
 </script>
 </body>
 </html>
