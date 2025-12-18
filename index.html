@@ -6,7 +6,19 @@
   <title>🎄 Amigo Secreto</title>
 
   <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+
+// 🔧 GARANTE FUNCIONAMENTO DO BOTÃO EM MOBILE E PC
+const btn = document.getElementById('btnEntrar');
+if (btn) {
+  btn.addEventListener('click', entrar);
+  btn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    entrar();
+  }, { passive: false });
+}
+
+</script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
@@ -49,7 +61,7 @@
   <h2>🎄 Amigo Secreto</h2>
   <p>Digite seu nome</p>
   <input id="nomeInput" placeholder="Ex: Vini" />
-  <button onclick="entrar()">Entrar</button>
+  <button id="btnEntrar" type="button">Entrar</button>
 </div>
 
 <div class="box hidden" id="sorteioBox">
