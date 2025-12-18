@@ -63,8 +63,8 @@
     Abra o link diretamente no navegador.
   </p>
   <p style="font-size:13px; opacity:0.6">
-    O link está na descrição do vídeo.<br>
-    Obrigado por assistir.
+    Este site foi criado para realizar um sorteio simples,
+    justo e sem confusão de amigo secreto.
   </p>
 </div>
 
@@ -123,6 +123,7 @@ async function entrar() {
     return;
   }
 
+  // ADMIN
   if (nome === ADMIN) {
     document.getElementById('loginBox').classList.add('hidden');
     document.getElementById('adminBox').classList.remove('hidden');
@@ -136,37 +137,43 @@ async function entrar() {
     return;
   }
 
-  const refUsuario = db.collection('usuarios').doc(nome);
-  const snap = await refUsuario.get();
+  try {
+    const refUsuario = db.collection('usuarios').doc(nome);
+    const snap = await refUsuario.get();
 
-  if (snap.exists) {
-    alert('Esse nome já foi usado.');
-    return;
+    if (snap.exists) {
+      alert('Esse nome já foi usado.');
+      return;
+    }
+
+    const todos = await db.collection('usuarios').get();
+    const jaSorteados = todos.docs.map(d => d.data().tirou);
+
+    const opcoes = NOMES.filter(n =>
+      normalizar(n) !== nome && !jaSorteados.includes(n)
+    );
+
+    if (opcoes.length === 0) {
+      alert('Erro no sorteio.');
+      return;
+    }
+
+    const sorteado = opcoes[Math.floor(Math.random() * opcoes.length)];
+
+    await refUsuario.set({
+      nome: nomeOficial,
+      tirou: sorteado,
+      data: Date.now()
+    });
+
+    document.getElementById('loginBox').classList.add('hidden');
+    document.getElementById('sorteioBox').classList.remove('hidden');
+    document.getElementById('resultado').innerText = sorteado;
+
+  } catch (erro) {
+    alert('Erro ao conectar com o servidor. Verifique o Firebase.');
+    console.error(erro);
   }
-
-  const todos = await db.collection('usuarios').get();
-  const jaSorteados = todos.docs.map(d => d.data().tirou);
-
-  const opcoes = NOMES.filter(n =>
-    normalizar(n) !== nome && !jaSorteados.includes(n)
-  );
-
-  if (opcoes.length === 0) {
-    alert('Erro no sorteio.');
-    return;
-  }
-
-  const sorteado = opcoes[Math.floor(Math.random() * opcoes.length)];
-
-  await refUsuario.set({
-    nome: nomeOficial,
-    tirou: sorteado,
-    data: Date.now()
-  });
-
-  document.getElementById('loginBox').classList.add('hidden');
-  document.getElementById('sorteioBox').classList.remove('hidden');
-  document.getElementById('resultado').innerText = sorteado;
 }
 
 /**************** ADMIN ****************/
