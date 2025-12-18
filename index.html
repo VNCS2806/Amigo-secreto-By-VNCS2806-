@@ -144,18 +144,19 @@ const nomesPadrao = [
    MAPA DE NOMES (RECONHECIMENTO)
    =============================== */
 const mapaNomes = {
-  alan:'Alan',
-  dani:'Dani', daniel:'Dani',
-  vini:'Vini', vinicius:'Vini',
-  alani:'Alani',
-  vanda:'Vanda',
-  geraldo:'Geraldo',
-  lourdes:'Lourdes',
-  andre:'André',
-  vania:'Vânia',
-  cassia:'Cássia',
-  anderson:'Anderson',
-  liz:'Liz'
+  alan:['Alan'],
+  dani:['Dani'], daniel:['Dani'],
+  vini:['Vini'], vinicius:['Vini'],
+  alani:['Alani'],
+  vanda:['Vanda'],
+  lourdes:['Lourdes'],
+  'vandalourdes':['Vanda','Lourdes'],
+  geraldo:['Geraldo'],
+  andre:['André'],
+  vania:['Vânia'],
+  cassia:['Cássia'],
+  anderson:['Anderson'],
+  liz:['Liz']
 };
 
 function normalizar(txt){
@@ -164,30 +165,29 @@ function normalizar(txt){
 
 function initEvento(){
   if(!localStorage.getItem(EVENT_KEY)){
-    let valido = false;
     let cartas = [];
+    let valido = false;
     while(!valido){
-      const embaralhado=[...nomesPadrao].sort(()=>Math.random()-0.5);
-      cartas=embaralhado.map((nome,i)=>({
+      const embaralhado = [...nomesPadrao].sort(()=>Math.random()-0.5);
+      cartas = embaralhado.map((nome,i)=>({
         nome,
-        amigo:embaralhado[(i+1)%embaralhado.length],
-        pickedBy:null
+        amigo: embaralhado[(i+1)%embaralhado.length],
+        pickedBy: null
       }));
       valido = cartas.every(c => c.nome !== c.amigo);
     }
-    localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
+    localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
   }
   if(!localStorage.getItem(DEVICE_KEY)){
-    localStorage.setItem(DEVICE_KEY,JSON.stringify({}));
-  }
-}
-  if(!localStorage.getItem(DEVICE_KEY)){
-    localStorage.setItem(DEVICE_KEY,JSON.stringify({}));
+    localStorage.setItem(DEVICE_KEY, JSON.stringify({}));
   }
 }
 
 function login(){
-  const nome = normalizar(document.getElementById('nomeInput').value);
+  const input = document.getElementById('nomeInput');
+  if(!input) return;
+  const nomeRaw = input.value;
+  const nome = normalizar(nomeRaw);
 
   if(nome === ADMIN_USER){ abrirAdmin(); return; }
 
@@ -202,19 +202,23 @@ function login(){
   }
 
   const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
-  usuarios.atual = mapaNomes[nome];
+  usuarios.atualLista = mapaNomes[nome];
+  usuarios.atualIndex = 0;
+  usuarios.atual = usuarios.atualLista[0];
   localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
 
-  document.getElementById('grid').style.display='grid';
-  document.getElementById('result').innerHTML='';
+  document.getElementById('grid').style.display = 'grid';
+  document.getElementById('result').innerHTML = '';
   render();
 }
 
 function abrirAdmin(){
   const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
   let html = '<h2>🔐 Painel do Admin</h2>';
-  cartas.forEach(c=>{ html += `<p><b>${c.nome}</b> → ${c.pickedBy ? c.amigo : '❌ não escolheu'}</p>`; });
-  html += '<br><button onclick="resetarEvento()" style="padding:10px 20px;border:none;border-radius:10px;background:#b91c1c;color:white">Resetar evento</button>';
+  cartas.forEach(c=>{
+    html += `<p><b>${c.nome}</b> → ${c.pickedBy ? c.amigo : '❌ não escolheu'}</p>`;
+  });
+  html += '<br><button onclick="resetarEvento()" style="padding:12px 22px;border:none;border-radius:10px;background:#b91c1c;color:white;font-size:1rem;cursor:pointer">Resetar evento</button>';
   document.getElementById('loginBox').innerHTML = html;
 }
 
@@ -222,35 +226,42 @@ function resetarEvento(){
   localStorage.removeItem(EVENT_KEY);
   localStorage.removeItem(DEVICE_KEY);
   localStorage.removeItem(DEVICE_LOCK);
-  alert('Evento resetado. Todos os dispositivos podem participar novamente.');
+  alert('Evento resetado com sucesso.');
   location.reload();
 }
 
 function render(){
-  const grid=document.getElementById('grid');
-  grid.innerHTML='';
-  const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
   cartas.forEach((c,i)=>{
-    const div=document.createElement('div');
-    div.className='card'+(c.pickedBy?' picked':'');
-    div.textContent='🎴';
-    if(!c.pickedBy) div.onclick=()=>pickCard(i);
+    const div = document.createElement('div');
+    div.className = 'card' + (c.pickedBy ? ' picked' : '');
+    div.textContent = '🎴';
+    if(!c.pickedBy){
+      div.onclick = ()=> pickCard(i);
+    }
     grid.appendChild(div);
   });
 }
 
 function pickCard(index){
-  const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
-  const usuarios=JSON.parse(localStorage.getItem(DEVICE_KEY));
-  const usuarioAtual=usuarios.atual;
+  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
+  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
+  const usuarioAtual = usuarios.atual;
+
+  if(!usuarioAtual) return;
   if(usuarios[usuarioAtual]) return;
-  cartas[index].pickedBy=usuarioAtual;
-  usuarios[usuarioAtual]=cartas[index].amigo;
-  localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
-  localStorage.setItem(DEVICE_KEY,JSON.stringify(usuarios));
-  localStorage.setItem(DEVICE_LOCK,'true');
-  document.getElementById('grid').style.display='none';
-  document.getElementById('result').innerHTML=`🎁 <b>${usuarioAtual}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${cartas[index].amigo}</span>`;
+
+  cartas[index].pickedBy = usuarioAtual;
+  usuarios[usuarioAtual] = cartas[index].amigo;
+
+  localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+  localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
+  localStorage.setItem(DEVICE_LOCK, 'true');
+
+  document.getElementById('grid').style.display = 'none';
+  document.getElementById('result').innerHTML = `🎁 <b>${usuarioAtual}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${cartas[index].amigo}</span>`;
 }
 
 initEvento();
