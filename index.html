@@ -156,15 +156,30 @@ function normalizar(txt){
   return txt.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
 }
 
+function gerarDerangement(lista){
+  let arr = [...lista];
+  let valido = false;
+  while(!valido){
+    arr.sort(()=>Math.random()-0.5);
+    valido = arr.every((v,i)=>v !== lista[i]);
+  }
+  return arr;
+}
+
 function initEvento(){
   if(!localStorage.getItem(EVENT_KEY)){
-    let valido = false;
-    let cartas = [];
-    while(!valido){
-      const embaralhado = [...nomesPadrao].sort(()=>Math.random()-0.5);
-      cartas = nomesPadrao.map((n,i)=>({ nome:n, amigo:embaralhado[i], pickedBy:null }));
-      valido = cartas.every(c=>c.nome!==c.amigo);
-    }
+    const amigos = gerarDerangement(nomesPadrao);
+    const cartas = nomesPadrao.map((n,i)=>({
+      nome: n,
+      amigo: amigos[i],
+      pickedBy: null
+    }));
+    localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+  }
+  if(!localStorage.getItem(USERS_KEY)){
+    localStorage.setItem(USERS_KEY, JSON.stringify({}));
+  }
+}
     localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
   }
   if(!localStorage.getItem(USERS_KEY)){
