@@ -1,30 +1,81 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎄 Amigo Secreto</title>
-  <meta name="description" content="Sorteio online de amigo secreto, simples, seguro e funcionando em qualquer dispositivo, sem cadastro ou Firebase.">
-  <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: radial-gradient(circle, #0b3d2e, #021a12); color: #fff; text-align: center; }
-    .box { max-width: 420px; margin: 40px auto; background: rgba(0,0,0,0.35); padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
-    input, button { width: 100%; padding: 14px; margin-top: 12px; border-radius: 8px; border: none; font-size: 16px; }
-    button { background: #b30000; color: white; cursor: pointer; }
-    button:active { background: #8f0000; }
-    .hidden { display: none; }
-    ul { text-align: left; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎄 Amigo Secreto – Cartas</title>
+<meta name="description" content="Jogo online de amigo secreto com cartas, offline, seguro e funcional em qualquer dispositivo.">
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: radial-gradient(circle, #0b3d2e, #021a12);
+  color: #fff;
+  text-align: center;
+}
+.box {
+  max-width: 500px;
+  margin: 40px auto;
+  background: rgba(0,0,0,0.35);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+}
+input, button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+}
+button {
+  background: #b30000;
+  color: white;
+  cursor: pointer;
+}
+button:active { background: #8f0000; }
+.hidden { display: none; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 15px;
+  justify-items: center;
+  margin-top: 20px;
+}
+.card {
+  width: 80px;
+  height: 120px;
+  background: linear-gradient(135deg,#b30000,#6d0000);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #fff;
+  box-shadow: 0 6px 12px rgba(0,0,0,.4);
+  transition: transform .3s, box-shadow .3s;
+}
+.card:hover { transform: scale(1.08); box-shadow: 0 10px 20px rgba(0,0,0,.6); }
+ul { text-align: left; }
+</style>
 </head>
 <body>
 
 <div class="box" id="loginBox">
   <h2>🎄 Amigo Secreto</h2>
   <p>Digite seu nome</p>
-  <input id="nomeInput" placeholder="Ex: Vini" />
+  <input id="nomeInput" placeholder="Ex: Vini">
   <button id="btnEntrar">Entrar</button>
 </div>
 
-<div class="box hidden" id="sorteioBox">
+<div class="box hidden" id="cartasBox">
+  <h2>Escolha uma carta</h2>
+  <div class="grid" id="cartasGrid"></div>
+</div>
+
+<div class="box hidden" id="resultadoBox">
   <h2>🎁 Seu amigo secreto é:</h2>
   <h1 id="resultado"></h1>
 </div>
@@ -39,21 +90,18 @@
 <script>
 const NOMES = ['Alan','Dani','Vini','Alani','Vanda','Geraldo','Lourdes','André','Vânia','Cássia','Anderson','Liz'];
 const ADMIN = 'viniciusadm';
-
-// Guarda quem já sorteou e quem tirou quem
 let usuarios = {}; // { nome: tirou }
+let nomeAtual = '';
 
-// normaliza o nome para comparações
-function normalizar(txt) { return txt.trim().toLowerCase(); }
+function normalizar(txt){ return txt.trim().toLowerCase(); }
 
-// ENTRAR
 function entrar() {
   const input = document.getElementById('nomeInput');
   const nomeDigitado = normalizar(input.value);
-  if (!nomeDigitado) { alert('Digite seu nome'); return; }
+  if (!nomeDigitado){ alert('Digite seu nome'); return; }
 
   // ADMIN
-  if (nomeDigitado === ADMIN) {
+  if (nomeDigitado === ADMIN){
     document.getElementById('loginBox').classList.add('hidden');
     document.getElementById('adminBox').classList.remove('hidden');
     atualizarAdmin();
@@ -61,53 +109,67 @@ function entrar() {
   }
 
   // valida nome
-  const nomeOficial = NOMES.find(n => normalizar(n) === nomeDigitado);
-  if (!nomeOficial) { alert('Nome não reconhecido'); return; }
+  const nomeOficial = NOMES.find(n=>normalizar(n)===nomeDigitado);
+  if (!nomeOficial){ alert('Nome não reconhecido'); return; }
 
   // bloqueio global por nome
-  if (usuarios[nomeOficial]) { alert('Esse nome já sorteou.'); return; }
+  if (usuarios[nomeOficial]){ alert('Esse nome já sorteou.'); return; }
 
-  // opções válidas (não sortear a si mesmo e nomes já sorteados)
-  let opcoes = NOMES.filter(n => n !== nomeOficial && !Object.values(usuarios).includes(n));
-  if (opcoes.length === 0) { alert('Erro no sorteio'); return; }
+  nomeAtual = nomeOficial;
+  mostrarCartas();
+}
 
-  const sorteado = opcoes[Math.floor(Math.random()*opcoes.length)];
-  usuarios[nomeOficial] = sorteado;
-
-  // mostra resultado
+// Exibe cartas
+function mostrarCartas(){
+  const grid = document.getElementById('cartasGrid');
+  grid.innerHTML = '';
+  let opcoes = NOMES.filter(n => n !== nomeAtual && !Object.values(usuarios).includes(n));
+  opcoes.forEach(()=>{ // a quantidade de cartas é igual ao número de opções
+    const card = document.createElement('div');
+    card.className='card';
+    card.innerText='🎴';
+    card.onclick = ()=>abrirCarta(card, opcoes);
+    grid.appendChild(card);
+  });
   document.getElementById('loginBox').classList.add('hidden');
-  document.getElementById('sorteioBox').classList.remove('hidden');
-  document.getElementById('resultado').innerText = sorteado;
+  document.getElementById('cartasBox').classList.remove('hidden');
+}
 
-  // atualiza admin se ele estiver logado
+// Sorteia quando clica na carta
+function abrirCarta(card, opcoes){
+  const sorteado = opcoes[Math.floor(Math.random()*opcoes.length)];
+  usuarios[nomeAtual]=sorteado;
+  document.getElementById('cartasBox').classList.add('hidden');
+  document.getElementById('resultadoBox').classList.remove('hidden');
+  document.getElementById('resultado').innerText = sorteado;
   atualizarAdmin();
 }
 
-// ATUALIZA LISTA DO ADMIN
-function atualizarAdmin() {
+// Admin
+function atualizarAdmin(){
   const lista = document.getElementById('lista');
-  lista.innerHTML = '';
-  if (Object.keys(usuarios).length === 0) { lista.innerHTML = '<li>Ninguém sorteou ainda</li>'; return; }
-  for (let [nome, tirou] of Object.entries(usuarios)) {
-    lista.innerHTML += `<li>${nome} ➜ ${tirou}</li>`;
+  lista.innerHTML='';
+  if(Object.keys(usuarios).length===0){ lista.innerHTML='<li>Ninguém sorteou ainda</li>'; return; }
+  for(let [nome,tirou] of Object.entries(usuarios)){
+    lista.innerHTML+=`<li>${nome} ➜ ${tirou}</li>`;
   }
 }
 
-// RESETAR EVENTO
-function resetar() {
-  if (!confirm('Resetar TODO o evento?')) return;
-  usuarios = {};
-  document.getElementById('sorteioBox').classList.add('hidden');
+// Reset
+function resetar(){
+  if(!confirm('Resetar TODO o evento?')) return;
+  usuarios={};
+  document.getElementById('resultadoBox').classList.add('hidden');
+  document.getElementById('cartasBox').classList.add('hidden');
   document.getElementById('loginBox').classList.remove('hidden');
   atualizarAdmin();
   alert('Evento resetado');
 }
 
-// BOTÕES
 document.getElementById('btnEntrar').addEventListener('click', entrar);
 document.getElementById('btnEntrar').addEventListener('touchend', e=>{ e.preventDefault(); entrar(); }, {passive:false});
 document.getElementById('btnReset').addEventListener('click', resetar);
-
 </script>
+
 </body>
 </html>
