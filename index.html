@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>🎄 Amigo Secreto</title>
+  <meta name="description" content="Sistema online simples e seguro para sorteio de amigo secreto, com acesso individual e painel administrativo em tempo real." />
 
-  <!-- Anti-cache para GitHub Pages -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-
-  <!-- Firebase compat (estável em mobile) -->
+  <!-- Firebase (compatível com GitHub Pages e mobile) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -24,7 +21,7 @@
     }
     .box {
       max-width: 420px;
-      margin: 30px auto;
+      margin: 40px auto;
       background: rgba(0,0,0,0.35);
       padding: 25px;
       border-radius: 12px;
@@ -43,45 +40,31 @@
       color: white;
       cursor: pointer;
     }
-    button:active { background: #8f0000; }
-    .hidden { display: none; }
-    ul { text-align: left; }
+    button:active {
+      background: #8f0000;
+    }
+    .hidden {
+      display: none;
+    }
+    ul {
+      text-align: left;
+    }
   </style>
 </head>
 <body>
 
-<!-- TÍTULO / INTRODUÇÃO -->
-<div class="box">
-  <h1>🎄 Amigo Secreto</h1>
-  <p style="opacity:0.9; line-height:1.4">
-    Bem-vindo ao sorteio de amigo secreto.<br>
-    Digite <b>seu nome</b> exatamente como combinado
-    e descubra quem você tirou.
-  </p>
-  <p style="font-size:14px; opacity:0.7">
-    ⚠️ Cada nome só pode ser usado uma vez.<br>
-    Abra o link diretamente no navegador.
-  </p>
-  <p style="font-size:13px; opacity:0.6">
-    Este site foi criado para realizar um sorteio simples,
-    justo e sem confusão de amigo secreto.
-  </p>
-</div>
-
-<!-- LOGIN -->
 <div class="box" id="loginBox">
-  <h2>Entrar</h2>
-  <input id="nomeInput" placeholder="Digite seu nome" />
+  <h2>🎄 Amigo Secreto</h2>
+  <p>Digite seu nome</p>
+  <input id="nomeInput" placeholder="Ex: Vini" />
   <button id="btnEntrar" type="button">Entrar</button>
 </div>
 
-<!-- RESULTADO -->
 <div class="box hidden" id="sorteioBox">
   <h2>🎁 Seu amigo secreto é:</h2>
   <h1 id="resultado"></h1>
 </div>
 
-<!-- ADMIN -->
 <div class="box hidden" id="adminBox">
   <h2>🔐 ADMIN</h2>
   <button id="btnReset" type="button">Resetar evento</button>
@@ -90,8 +73,8 @@
 </div>
 
 <script>
-/**************** FIREBASE ****************/
-// ⚠️ SUBSTITUA PELOS DADOS DO SEU FIREBASE
+/**************** FIREBASE CONFIG ****************/
+/* 🔴 OBRIGATÓRIO: coloque os dados corretos do seu Firebase */
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_AUTH_DOMAIN",
@@ -115,34 +98,35 @@ function normalizar(txt) {
 
 /**************** LOGIN ****************/
 async function entrar() {
-  const nomeBruto = document.getElementById('nomeInput').value;
-  const nome = normalizar(nomeBruto);
-
-  if (!nome) {
-    alert('Digite seu nome');
-    return;
-  }
-
-  // ADMIN
-  if (nome === ADMIN) {
-    document.getElementById('loginBox').classList.add('hidden');
-    document.getElementById('adminBox').classList.remove('hidden');
-    ouvirAdmin();
-    return;
-  }
-
-  const nomeOficial = NOMES.find(n => normalizar(n) === nome);
-  if (!nomeOficial) {
-    alert('Nome não reconhecido');
-    return;
-  }
-
   try {
-    const refUsuario = db.collection('usuarios').doc(nome);
-    const snap = await refUsuario.get();
+    const nomeInput = document.getElementById('nomeInput');
+    const nomeDigitado = normalizar(nomeInput.value);
 
-    if (snap.exists) {
-      alert('Esse nome já foi usado.');
+    if (!nomeDigitado) {
+      alert('Digite seu nome');
+      return;
+    }
+
+    /* ADMIN */
+    if (nomeDigitado === ADMIN) {
+      document.getElementById('loginBox').classList.add('hidden');
+      document.getElementById('adminBox').classList.remove('hidden');
+      ouvirAdmin();
+      return;
+    }
+
+    const nomeOficial = NOMES.find(n => normalizar(n) === nomeDigitado);
+    if (!nomeOficial) {
+      alert('Nome não reconhecido');
+      return;
+    }
+
+    const refUsuario = db.collection('usuarios').doc(nomeDigitado);
+
+    /* BLOQUEIO GLOBAL */
+    const jaUsou = await refUsuario.get();
+    if (jaUsou.exists) {
+      alert('Esse nome já foi utilizado.');
       return;
     }
 
@@ -150,7 +134,7 @@ async function entrar() {
     const jaSorteados = todos.docs.map(d => d.data().tirou);
 
     const opcoes = NOMES.filter(n =>
-      normalizar(n) !== nome && !jaSorteados.includes(n)
+      normalizar(n) !== nomeDigitado && !jaSorteados.includes(n)
     );
 
     if (opcoes.length === 0) {
@@ -171,8 +155,8 @@ async function entrar() {
     document.getElementById('resultado').innerText = sorteado;
 
   } catch (erro) {
-    alert('Erro ao conectar com o servidor. Verifique o Firebase.');
-    console.error(erro);
+    console.error('ERRO FIREBASE:', erro);
+    alert('Erro de conexão. Verifique o Firebase.');
   }
 }
 
@@ -180,17 +164,17 @@ async function entrar() {
 function ouvirAdmin() {
   const lista = document.getElementById('lista');
 
-  db.collection('usuarios').onSnapshot(snap => {
+  db.collection('usuarios').onSnapshot(snapshot => {
     lista.innerHTML = '';
 
-    if (snap.empty) {
+    if (snapshot.empty) {
       lista.innerHTML = '<li>Ninguém sorteou ainda</li>';
       return;
     }
 
-    snap.forEach(d => {
+    snapshot.forEach(doc => {
       const li = document.createElement('li');
-      li.innerText = `${d.data().nome} ➜ ${d.data().tirou}`;
+      li.innerText = `${doc.data().nome} ➜ ${doc.data().tirou}`;
       lista.appendChild(li);
     });
   });
@@ -202,22 +186,22 @@ async function resetar() {
   const snap = await db.collection('usuarios').get();
   const batch = db.batch();
 
-  snap.forEach(d => batch.delete(d.ref));
+  snap.forEach(doc => batch.delete(doc.ref));
   await batch.commit();
 
-  alert('Evento resetado com sucesso');
+  alert('Evento resetado');
 }
 
-/**************** BOTÕES (mobile-safe) ****************/
+/**************** BOTÕES (100% MOBILE SAFE) ****************/
 const btnEntrar = document.getElementById('btnEntrar');
 btnEntrar.addEventListener('click', entrar);
-btnEntrar.addEventListener('touchstart', e => {
+btnEntrar.addEventListener('touchend', e => {
   e.preventDefault();
   entrar();
 }, { passive: false });
 
-const btnReset = document.getElementById('btnReset');
-btnReset.addEventListener('click', resetar);
+document.getElementById('btnReset')
+  .addEventListener('click', resetar);
 </script>
 
 </body>
