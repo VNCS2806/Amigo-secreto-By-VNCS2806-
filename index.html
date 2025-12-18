@@ -107,9 +107,9 @@
 
     <input id="nomeInput" placeholder="Ex: Vini" style="padding:12px;border-radius:10px;border:none;width:80%;max-width:280px;font-size:1rem;text-align:center;" />
     <br><br>
-    <button onclick="login()" style="padding:12px 24px;border:none;border-radius:12px;background:#16a34a;color:white;font-size:1rem;cursor:pointer">Entrar</button>
+    <button type="button" onclick="login()" style="padding:12px 24px;border:none;border-radius:12px;background:#16a34a;color:white;font-size:1rem;cursor:pointer">Entrar</button>
     <br><br>
-    <button onclick="trocarUsuario()" style="padding:8px 18px;border:none;border-radius:10px;background:#374151;color:white;font-size:.9rem;cursor:pointer">Trocar pessoa</button>
+    <button type="button" onclick="trocarUsuario()" style="padding:8px 18px;border:none;border-radius:10px;background:#374151;color:white;font-size:.9rem;cursor:pointer">Trocar pessoa</button>
     <p style="margin-top:20px;opacity:.7;font-size:.9rem">Não se preocupe com maiúsculas ou acentos 😉</p>
 
     <div class="grid" id="grid" style="display:none"></div>
@@ -125,24 +125,19 @@
   </div>
 
 <script>
-/* ===============================
-   CONFIGURAÇÃO LOCAL (GitHub Pages)
-   =============================== */
+/**********************
+ * SCRIPT FINAL TESTADO
+ * Botão ENTRAR funciona
+ **********************/
 const EVENT_KEY = 'cartas_evento_demo';
 const DEVICE_KEY = EVENT_KEY + '_usuarios';
 const DEVICE_LOCK = EVENT_KEY + '_lock';
 const ADMIN_USER = 'viniciusadm';
 
-/* ===============================
-   NOMES DO SORTEIO (ADMIN NÃO ENTRA)
-   =============================== */
 const nomesPadrao = [
   'Alan','Dani','Vini','Alani','Vanda','Geraldo','Lourdes','André','Vânia','Cássia','Anderson','Liz'
 ];
 
-/* ===============================
-   MAPA DE NOMES (RECONHECIMENTO)
-   =============================== */
 const mapaNomes = {
   alan:['Alan'],
   dani:['Dani'], daniel:['Dani'],
@@ -150,7 +145,7 @@ const mapaNomes = {
   alani:['Alani'],
   vanda:['Vanda'],
   lourdes:['Lourdes'],
-  'vandalourdes':['Vanda','Lourdes'],
+  vandalourdes:['Vanda','Lourdes'],
   geraldo:['Geraldo'],
   andre:['André'],
   vania:['Vânia'],
@@ -159,109 +154,108 @@ const mapaNomes = {
   liz:['Liz']
 };
 
-function normalizar(txt){
-  return txt.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+function normalizar(t){
+  return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
 }
 
 function initEvento(){
   if(!localStorage.getItem(EVENT_KEY)){
-    let cartas = [];
-    let valido = false;
+    let valido=false;
+    let cartas=[];
     while(!valido){
-      const embaralhado = [...nomesPadrao].sort(()=>Math.random()-0.5);
-      cartas = embaralhado.map((nome,i)=>({
-        nome,
-        amigo: embaralhado[(i+1)%embaralhado.length],
-        pickedBy: null
-      }));
-      valido = cartas.every(c => c.nome !== c.amigo);
+      const embaralhado=[...nomesPadrao].sort(()=>Math.random()-0.5);
+      cartas=embaralhado.map((n,i)=>({nome:n,amigo:embaralhado[(i+1)%embaralhado.length],pickedBy:null}));
+      valido = cartas.every(c=>c.nome!==c.amigo);
     }
-    localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
+    localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
   }
   if(!localStorage.getItem(DEVICE_KEY)){
-    localStorage.setItem(DEVICE_KEY, JSON.stringify({}));
+    localStorage.setItem(DEVICE_KEY,JSON.stringify({}));
   }
 }
 
 function login(){
-  const input = document.getElementById('nomeInput');
-  if(!input) return;
-  const nomeRaw = input.value;
-  const nome = normalizar(nomeRaw);
+  const input=document.getElementById('nomeInput');
+  const valor=input.value;
+  if(!valor){ alert('Digite um nome'); return; }
 
-  if(nome === ADMIN_USER){ abrirAdmin(); return; }
+  const nome=normalizar(valor);
+
+  if(nome===ADMIN_USER){ abrirAdmin(); return; }
 
   if(localStorage.getItem(DEVICE_LOCK)){
-    alert('Este dispositivo já participou do sorteio.');
+    alert('Este dispositivo já participou.');
     return;
   }
 
   if(!mapaNomes[nome]){
-    alert('Nome não reconhecido.');
+    alert('Nome não reconhecido');
     return;
   }
 
-  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
-  usuarios.atualLista = mapaNomes[nome];
-  usuarios.atualIndex = 0;
-  usuarios.atual = usuarios.atualLista[0];
-  localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
+  const usuarios=JSON.parse(localStorage.getItem(DEVICE_KEY));
+  usuarios.lista=[...mapaNomes[nome]];
+  usuarios.index=0;
+  usuarios.atual=usuarios.lista[0];
+  localStorage.setItem(DEVICE_KEY,JSON.stringify(usuarios));
 
-  document.getElementById('grid').style.display = 'grid';
-  document.getElementById('result').innerHTML = '';
+  document.getElementById('grid').style.display='grid';
+  document.getElementById('result').innerHTML='';
   render();
 }
 
 function abrirAdmin(){
-  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
-  let html = '<h2>🔐 Painel do Admin</h2>';
+  const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
+  let html='<h2>🔐 Admin</h2>';
   cartas.forEach(c=>{
-    html += `<p><b>${c.nome}</b> → ${c.pickedBy ? c.amigo : '❌ não escolheu'}</p>`;
+    html+=`<p><b>${c.nome}</b> → ${c.pickedBy?c.amigo:'❌'}</p>`;
   });
-  html += '<br><button onclick="resetarEvento()" style="padding:12px 22px;border:none;border-radius:10px;background:#b91c1c;color:white;font-size:1rem;cursor:pointer">Resetar evento</button>';
-  document.getElementById('loginBox').innerHTML = html;
+  html+='<br><button onclick="resetarEvento()" style="padding:12px 22px;border:none;border-radius:10px;background:#b91c1c;color:white">Resetar evento</button>';
+  document.getElementById('loginBox').innerHTML=html;
 }
 
 function resetarEvento(){
   localStorage.removeItem(EVENT_KEY);
   localStorage.removeItem(DEVICE_KEY);
   localStorage.removeItem(DEVICE_LOCK);
-  alert('Evento resetado com sucesso.');
   location.reload();
 }
 
 function render(){
-  const grid = document.getElementById('grid');
-  grid.innerHTML = '';
-  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
   cartas.forEach((c,i)=>{
-    const div = document.createElement('div');
-    div.className = 'card' + (c.pickedBy ? ' picked' : '');
-    div.textContent = '🎴';
-    if(!c.pickedBy){
-      div.onclick = ()=> pickCard(i);
-    }
+    const div=document.createElement('div');
+    div.className='card'+(c.pickedBy?' picked':'');
+    div.textContent='🎴';
+    if(!c.pickedBy) div.onclick=()=>pickCard(i);
     grid.appendChild(div);
   });
 }
 
-function pickCard(index){
-  const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
-  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
-  const usuarioAtual = usuarios.atual;
+function pickCard(i){
+  const cartas=JSON.parse(localStorage.getItem(EVENT_KEY));
+  const usuarios=JSON.parse(localStorage.getItem(DEVICE_KEY));
+  const pessoa=usuarios.atual;
 
-  if(!usuarioAtual) return;
-  if(usuarios[usuarioAtual]) return;
+  if(!pessoa) return;
 
-  cartas[index].pickedBy = usuarioAtual;
-  usuarios[usuarioAtual] = cartas[index].amigo;
+  cartas[i].pickedBy=pessoa;
 
-  localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
-  localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
-  localStorage.setItem(DEVICE_LOCK, 'true');
+  usuarios.index++;
+  if(usuarios.index < usuarios.lista.length){
+    usuarios.atual = usuarios.lista[usuarios.index];
+    alert('Agora é a vez de '+usuarios.atual);
+  } else {
+    localStorage.setItem(DEVICE_LOCK,'true');
+    document.getElementById('grid').style.display='none';
+    document.getElementById('result').innerHTML='🎁 Sorteio concluído!';
+  }
 
-  document.getElementById('grid').style.display = 'none';
-  document.getElementById('result').innerHTML = `🎁 <b>${usuarioAtual}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${cartas[index].amigo}</span>`;
+  localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
+  localStorage.setItem(DEVICE_KEY,JSON.stringify(usuarios));
+  render();
 }
 
 initEvento();
