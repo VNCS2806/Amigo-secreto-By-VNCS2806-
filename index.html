@@ -5,20 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🎄 Amigo Secreto</title>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+  <!-- Anti-cache para GitHub Pages -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
-// 🔧 GARANTE FUNCIONAMENTO DO BOTÃO EM MOBILE E PC
-const btn = document.getElementById('btnEntrar');
-if (btn) {
-  btn.addEventListener('click', entrar);
-  btn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    entrar();
-  }, { passive: false });
-}
-
-</script>
+  <!-- Firebase compat (estável em mobile) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
@@ -30,8 +23,8 @@ if (btn) {
       text-align: center;
     }
     .box {
-      max-width: 400px;
-      margin: 40px auto;
+      max-width: 420px;
+      margin: 30px auto;
       background: rgba(0,0,0,0.35);
       padding: 25px;
       border-radius: 12px;
@@ -39,7 +32,7 @@ if (btn) {
     }
     input, button {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       margin-top: 12px;
       border-radius: 8px;
       border: none;
@@ -50,34 +43,55 @@ if (btn) {
       color: white;
       cursor: pointer;
     }
-    button:hover { background: #8f0000; }
+    button:active { background: #8f0000; }
     .hidden { display: none; }
     ul { text-align: left; }
   </style>
 </head>
 <body>
 
+<!-- TÍTULO / INTRODUÇÃO -->
+<div class="box">
+  <h1>🎄 Amigo Secreto</h1>
+  <p style="opacity:0.9; line-height:1.4">
+    Bem-vindo ao sorteio de amigo secreto.<br>
+    Digite <b>seu nome</b> exatamente como combinado
+    e descubra quem você tirou.
+  </p>
+  <p style="font-size:14px; opacity:0.7">
+    ⚠️ Cada nome só pode ser usado uma vez.<br>
+    Abra o link diretamente no navegador.
+  </p>
+  <p style="font-size:13px; opacity:0.6">
+    O link está na descrição do vídeo.<br>
+    Obrigado por assistir.
+  </p>
+</div>
+
+<!-- LOGIN -->
 <div class="box" id="loginBox">
-  <h2>🎄 Amigo Secreto</h2>
-  <p>Digite seu nome</p>
-  <input id="nomeInput" placeholder="Ex: Vini" />
+  <h2>Entrar</h2>
+  <input id="nomeInput" placeholder="Digite seu nome" />
   <button id="btnEntrar" type="button">Entrar</button>
 </div>
 
+<!-- RESULTADO -->
 <div class="box hidden" id="sorteioBox">
   <h2>🎁 Seu amigo secreto é:</h2>
   <h1 id="resultado"></h1>
 </div>
 
+<!-- ADMIN -->
 <div class="box hidden" id="adminBox">
   <h2>🔐 ADMIN</h2>
-  <button onclick="resetar()">Resetar Evento</button>
-  <h3>Status</h3>
+  <button id="btnReset" type="button">Resetar evento</button>
+  <h3>Status do sorteio</h3>
   <ul id="lista"></ul>
 </div>
 
 <script>
-// 🔥 CONFIG FIREBASE (SUBSTITUA PELO SEU)
+/**************** FIREBASE ****************/
+// ⚠️ SUBSTITUA PELOS DADOS DO SEU FIREBASE
 const firebaseConfig = {
   apiKey: "SUA_API_KEY",
   authDomain: "SEU_AUTH_DOMAIN",
@@ -87,6 +101,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+/**************** CONFIG ****************/
 const NOMES = [
   'Alan','Dani','Vini','Alani','Vanda','Geraldo',
   'Lourdes','André','Vânia','Cássia','Anderson','Liz'
@@ -94,68 +109,108 @@ const NOMES = [
 
 const ADMIN = 'viniciusadm';
 
-function normalizar(nome) {
-  return nome.trim().toLowerCase();
+function normalizar(txt) {
+  return txt.trim().toLowerCase();
 }
 
+/**************** LOGIN ****************/
 async function entrar() {
-  const nomeDigitado = normalizar(document.getElementById('nomeInput').value);
-  if (!nomeDigitado) return alert('Digite um nome');
+  const nomeBruto = document.getElementById('nomeInput').value;
+  const nome = normalizar(nomeBruto);
 
-  if (nomeDigitado === ADMIN) {
-    document.getElementById('loginBox').classList.add('hidden');
-    document.getElementById('adminBox').classList.remove('hidden');
-    carregarAdmin();
+  if (!nome) {
+    alert('Digite seu nome');
     return;
   }
 
-  const ref = db.collection('usuarios').doc(nomeDigitado);
-  const docSnap = await ref.get();
+  if (nome === ADMIN) {
+    document.getElementById('loginBox').classList.add('hidden');
+    document.getElementById('adminBox').classList.remove('hidden');
+    ouvirAdmin();
+    return;
+  }
 
-  if (docSnap.exists) {
+  const nomeOficial = NOMES.find(n => normalizar(n) === nome);
+  if (!nomeOficial) {
+    alert('Nome não reconhecido');
+    return;
+  }
+
+  const refUsuario = db.collection('usuarios').doc(nome);
+  const snap = await refUsuario.get();
+
+  if (snap.exists) {
     alert('Esse nome já foi usado.');
     return;
   }
 
-  const disponiveisSnap = await db.collection('usuarios').get();
-  const usados = disponiveisSnap.docs.map(d => d.data().tirou);
+  const todos = await db.collection('usuarios').get();
+  const jaSorteados = todos.docs.map(d => d.data().tirou);
 
   const opcoes = NOMES.filter(n =>
-    normalizar(n) !== nomeDigitado && !usados.includes(n)
+    normalizar(n) !== nome && !jaSorteados.includes(n)
   );
 
   if (opcoes.length === 0) {
-    alert('Erro no sorteio');
+    alert('Erro no sorteio.');
     return;
   }
 
   const sorteado = opcoes[Math.floor(Math.random() * opcoes.length)];
 
-  await ref.set({ tirou: sorteado });
+  await refUsuario.set({
+    nome: nomeOficial,
+    tirou: sorteado,
+    data: Date.now()
+  });
 
   document.getElementById('loginBox').classList.add('hidden');
   document.getElementById('sorteioBox').classList.remove('hidden');
   document.getElementById('resultado').innerText = sorteado;
 }
 
-async function carregarAdmin() {
+/**************** ADMIN ****************/
+function ouvirAdmin() {
   const lista = document.getElementById('lista');
-  lista.innerHTML = '';
-  const snap = await db.collection('usuarios').get();
-  snap.forEach(d => {
-    const li = document.createElement('li');
-    li.innerText = `${d.id} ➜ ${d.data().tirou}`;
-    lista.appendChild(li);
+
+  db.collection('usuarios').onSnapshot(snap => {
+    lista.innerHTML = '';
+
+    if (snap.empty) {
+      lista.innerHTML = '<li>Ninguém sorteou ainda</li>';
+      return;
+    }
+
+    snap.forEach(d => {
+      const li = document.createElement('li');
+      li.innerText = `${d.data().nome} ➜ ${d.data().tirou}`;
+      lista.appendChild(li);
+    });
   });
 }
 
 async function resetar() {
-  if (!confirm('Resetar tudo?')) return;
+  if (!confirm('Resetar TODO o evento?')) return;
+
   const snap = await db.collection('usuarios').get();
-  snap.forEach(d => d.ref.delete());
-  alert('Evento resetado');
-  carregarAdmin();
+  const batch = db.batch();
+
+  snap.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+
+  alert('Evento resetado com sucesso');
 }
+
+/**************** BOTÕES (mobile-safe) ****************/
+const btnEntrar = document.getElementById('btnEntrar');
+btnEntrar.addEventListener('click', entrar);
+btnEntrar.addEventListener('touchstart', e => {
+  e.preventDefault();
+  entrar();
+}, { passive: false });
+
+const btnReset = document.getElementById('btnReset');
+btnReset.addEventListener('click', resetar);
 </script>
 
 </body>
