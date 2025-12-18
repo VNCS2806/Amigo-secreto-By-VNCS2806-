@@ -1,54 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎄 Amigo Secreto</title>
-  <meta name="description" content="Sistema online simples e seguro para sorteio de amigo secreto, com acesso individual e painel administrativo em tempo real." />
-
-  <!-- Firebase (compatível com GitHub Pages e mobile) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+  <meta name="description" content="Sorteio online de amigo secreto, simples, seguro e funcionando em qualquer dispositivo, sem cadastro ou Firebase.">
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: radial-gradient(circle, #0b3d2e, #021a12);
-      color: #fff;
-      text-align: center;
-    }
-    .box {
-      max-width: 420px;
-      margin: 40px auto;
-      background: rgba(0,0,0,0.35);
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-    }
-    input, button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 12px;
-      border-radius: 8px;
-      border: none;
-      font-size: 16px;
-    }
-    button {
-      background: #b30000;
-      color: white;
-      cursor: pointer;
-    }
-    button:active {
-      background: #8f0000;
-    }
-    .hidden {
-      display: none;
-    }
-    ul {
-      text-align: left;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; background: radial-gradient(circle, #0b3d2e, #021a12); color: #fff; text-align: center; }
+    .box { max-width: 420px; margin: 40px auto; background: rgba(0,0,0,0.35); padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
+    input, button { width: 100%; padding: 14px; margin-top: 12px; border-radius: 8px; border: none; font-size: 16px; }
+    button { background: #b30000; color: white; cursor: pointer; }
+    button:active { background: #8f0000; }
+    .hidden { display: none; }
+    ul { text-align: left; }
   </style>
 </head>
 <body>
@@ -57,7 +21,7 @@
   <h2>🎄 Amigo Secreto</h2>
   <p>Digite seu nome</p>
   <input id="nomeInput" placeholder="Ex: Vini" />
-  <button id="btnEntrar" type="button">Entrar</button>
+  <button id="btnEntrar">Entrar</button>
 </div>
 
 <div class="box hidden" id="sorteioBox">
@@ -67,142 +31,83 @@
 
 <div class="box hidden" id="adminBox">
   <h2>🔐 ADMIN</h2>
-  <button id="btnReset" type="button">Resetar evento</button>
+  <button id="btnReset">Resetar evento</button>
   <h3>Status do sorteio</h3>
   <ul id="lista"></ul>
 </div>
 
 <script>
-/**************** FIREBASE CONFIG ****************/
-/* 🔴 OBRIGATÓRIO: coloque os dados corretos do seu Firebase */
-const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_AUTH_DOMAIN",
-  projectId: "SEU_PROJECT_ID"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-/**************** CONFIG ****************/
-const NOMES = [
-  'Alan','Dani','Vini','Alani','Vanda','Geraldo',
-  'Lourdes','André','Vânia','Cássia','Anderson','Liz'
-];
-
+const NOMES = ['Alan','Dani','Vini','Alani','Vanda','Geraldo','Lourdes','André','Vânia','Cássia','Anderson','Liz'];
 const ADMIN = 'viniciusadm';
 
-function normalizar(txt) {
-  return txt.trim().toLowerCase();
+// Guarda quem já sorteou e quem tirou quem
+let usuarios = {}; // { nome: tirou }
+
+// normaliza o nome para comparações
+function normalizar(txt) { return txt.trim().toLowerCase(); }
+
+// ENTRAR
+function entrar() {
+  const input = document.getElementById('nomeInput');
+  const nomeDigitado = normalizar(input.value);
+  if (!nomeDigitado) { alert('Digite seu nome'); return; }
+
+  // ADMIN
+  if (nomeDigitado === ADMIN) {
+    document.getElementById('loginBox').classList.add('hidden');
+    document.getElementById('adminBox').classList.remove('hidden');
+    atualizarAdmin();
+    return;
+  }
+
+  // valida nome
+  const nomeOficial = NOMES.find(n => normalizar(n) === nomeDigitado);
+  if (!nomeOficial) { alert('Nome não reconhecido'); return; }
+
+  // bloqueio global por nome
+  if (usuarios[nomeOficial]) { alert('Esse nome já sorteou.'); return; }
+
+  // opções válidas (não sortear a si mesmo e nomes já sorteados)
+  let opcoes = NOMES.filter(n => n !== nomeOficial && !Object.values(usuarios).includes(n));
+  if (opcoes.length === 0) { alert('Erro no sorteio'); return; }
+
+  const sorteado = opcoes[Math.floor(Math.random()*opcoes.length)];
+  usuarios[nomeOficial] = sorteado;
+
+  // mostra resultado
+  document.getElementById('loginBox').classList.add('hidden');
+  document.getElementById('sorteioBox').classList.remove('hidden');
+  document.getElementById('resultado').innerText = sorteado;
+
+  // atualiza admin se ele estiver logado
+  atualizarAdmin();
 }
 
-/**************** LOGIN ****************/
-async function entrar() {
-  try {
-    const nomeInput = document.getElementById('nomeInput');
-    const nomeDigitado = normalizar(nomeInput.value);
-
-    if (!nomeDigitado) {
-      alert('Digite seu nome');
-      return;
-    }
-
-    /* ADMIN */
-    if (nomeDigitado === ADMIN) {
-      document.getElementById('loginBox').classList.add('hidden');
-      document.getElementById('adminBox').classList.remove('hidden');
-      ouvirAdmin();
-      return;
-    }
-
-    const nomeOficial = NOMES.find(n => normalizar(n) === nomeDigitado);
-    if (!nomeOficial) {
-      alert('Nome não reconhecido');
-      return;
-    }
-
-    const refUsuario = db.collection('usuarios').doc(nomeDigitado);
-
-    /* BLOQUEIO GLOBAL */
-    const jaUsou = await refUsuario.get();
-    if (jaUsou.exists) {
-      alert('Esse nome já foi utilizado.');
-      return;
-    }
-
-    const todos = await db.collection('usuarios').get();
-    const jaSorteados = todos.docs.map(d => d.data().tirou);
-
-    const opcoes = NOMES.filter(n =>
-      normalizar(n) !== nomeDigitado && !jaSorteados.includes(n)
-    );
-
-    if (opcoes.length === 0) {
-      alert('Erro no sorteio.');
-      return;
-    }
-
-    const sorteado = opcoes[Math.floor(Math.random() * opcoes.length)];
-
-    await refUsuario.set({
-      nome: nomeOficial,
-      tirou: sorteado,
-      data: Date.now()
-    });
-
-    document.getElementById('loginBox').classList.add('hidden');
-    document.getElementById('sorteioBox').classList.remove('hidden');
-    document.getElementById('resultado').innerText = sorteado;
-
-  } catch (erro) {
-    console.error('ERRO FIREBASE:', erro);
-    alert('Erro de conexão. Verifique o Firebase.');
+// ATUALIZA LISTA DO ADMIN
+function atualizarAdmin() {
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+  if (Object.keys(usuarios).length === 0) { lista.innerHTML = '<li>Ninguém sorteou ainda</li>'; return; }
+  for (let [nome, tirou] of Object.entries(usuarios)) {
+    lista.innerHTML += `<li>${nome} ➜ ${tirou}</li>`;
   }
 }
 
-/**************** ADMIN ****************/
-function ouvirAdmin() {
-  const lista = document.getElementById('lista');
-
-  db.collection('usuarios').onSnapshot(snapshot => {
-    lista.innerHTML = '';
-
-    if (snapshot.empty) {
-      lista.innerHTML = '<li>Ninguém sorteou ainda</li>';
-      return;
-    }
-
-    snapshot.forEach(doc => {
-      const li = document.createElement('li');
-      li.innerText = `${doc.data().nome} ➜ ${doc.data().tirou}`;
-      lista.appendChild(li);
-    });
-  });
-}
-
-async function resetar() {
+// RESETAR EVENTO
+function resetar() {
   if (!confirm('Resetar TODO o evento?')) return;
-
-  const snap = await db.collection('usuarios').get();
-  const batch = db.batch();
-
-  snap.forEach(doc => batch.delete(doc.ref));
-  await batch.commit();
-
+  usuarios = {};
+  document.getElementById('sorteioBox').classList.add('hidden');
+  document.getElementById('loginBox').classList.remove('hidden');
+  atualizarAdmin();
   alert('Evento resetado');
 }
 
-/**************** BOTÕES (100% MOBILE SAFE) ****************/
-const btnEntrar = document.getElementById('btnEntrar');
-btnEntrar.addEventListener('click', entrar);
-btnEntrar.addEventListener('touchend', e => {
-  e.preventDefault();
-  entrar();
-}, { passive: false });
+// BOTÕES
+document.getElementById('btnEntrar').addEventListener('click', entrar);
+document.getElementById('btnEntrar').addEventListener('touchend', e=>{ e.preventDefault(); entrar(); }, {passive:false});
+document.getElementById('btnReset').addEventListener('click', resetar);
 
-document.getElementById('btnReset')
-  .addEventListener('click', resetar);
 </script>
-
 </body>
 </html>
