@@ -164,10 +164,23 @@ function normalizar(txt){
 
 function initEvento(){
   if(!localStorage.getItem(EVENT_KEY)){
-    const embaralhado=[...nomesPadrao].sort(()=>Math.random()-0.5);
-    const cartas=embaralhado.map((nome,i)=>({nome,amigo:embaralhado[(i+1)%embaralhado.length],pickedBy:null}));
+    let valido = false;
+    let cartas = [];
+    while(!valido){
+      const embaralhado=[...nomesPadrao].sort(()=>Math.random()-0.5);
+      cartas=embaralhado.map((nome,i)=>({
+        nome,
+        amigo:embaralhado[(i+1)%embaralhado.length],
+        pickedBy:null
+      }));
+      valido = cartas.every(c => c.nome !== c.amigo);
+    }
     localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
   }
+  if(!localStorage.getItem(DEVICE_KEY)){
+    localStorage.setItem(DEVICE_KEY,JSON.stringify({}));
+  }
+}
   if(!localStorage.getItem(DEVICE_KEY)){
     localStorage.setItem(DEVICE_KEY,JSON.stringify({}));
   }
@@ -206,7 +219,10 @@ function abrirAdmin(){
 }
 
 function resetarEvento(){
-  localStorage.clear();
+  localStorage.removeItem(EVENT_KEY);
+  localStorage.removeItem(DEVICE_KEY);
+  localStorage.removeItem(DEVICE_LOCK);
+  alert('Evento resetado. Todos os dispositivos podem participar novamente.');
   location.reload();
 }
 
