@@ -107,7 +107,7 @@
 
     <input id="nomeInput" placeholder="Ex: Vini" style="padding:12px;border-radius:10px;border:none;width:80%;max-width:280px;font-size:1rem;text-align:center;" />
     <br><br>
-    <button type="button" onclick="login()" style="padding:12px 24px;border:none;border-radius:12px;background:#16a34a;color:white;font-size:1rem;cursor:pointer">Entrar</button>
+    <button type="button" id="btnEntrar">Entrar</button>
     <br><br>
     <button type="button" onclick="trocarUsuario()" style="padding:8px 18px;border:none;border-radius:10px;background:#374151;color:white;font-size:.9rem;cursor:pointer">Trocar pessoa</button>
     <p style="margin-top:20px;opacity:.7;font-size:.9rem">Não se preocupe com maiúsculas ou acentos 😉</p>
@@ -186,6 +186,9 @@ function initEvento(){
     localStorage.setItem(USERS_KEY, JSON.stringify({}));
   }
 }
+
+document.getElementById('btnEntrar').addEventListener('click', login);
+document.getElementById('btnEntrar').addEventListener('touchstart', function(e){ e.preventDefault(); login(); });
 
 function login(){
   const valor = document.getElementById('nomeInput').value;
