@@ -130,8 +130,7 @@
  * Botão ENTRAR funciona
  **********************/
 const EVENT_KEY = 'cartas_evento_demo';
-const DEVICE_KEY = EVENT_KEY + '_usuarios';
-const DEVICE_LOCK = EVENT_KEY + '_lock';
+const USERS_KEY = EVENT_KEY + '_usuarios_usados';
 const ADMIN_USER = 'viniciusadm';
 
 const nomesPadrao = [
@@ -164,13 +163,17 @@ function initEvento(){
     let cartas=[];
     while(!valido){
       const embaralhado=[...nomesPadrao].sort(()=>Math.random()-0.5);
-      cartas=embaralhado.map((n,i)=>({nome:n,amigo:embaralhado[(i+1)%embaralhado.length],pickedBy:null}));
+      cartas=nomesPadrao.map((n,i)=>({
+        nome:n,
+        amigo:embaralhado[i],
+        pickedBy:null
+      }));
       valido = cartas.every(c=>c.nome!==c.amigo);
     }
     localStorage.setItem(EVENT_KEY,JSON.stringify(cartas));
   }
-  if(!localStorage.getItem(DEVICE_KEY)){
-    localStorage.setItem(DEVICE_KEY,JSON.stringify({}));
+  if(!localStorage.getItem(USERS_KEY)){
+    localStorage.setItem(USERS_KEY,JSON.stringify({}));
   }
 }
 
@@ -183,9 +186,7 @@ function login(){
 
   if(nome===ADMIN_USER){ abrirAdmin(); return; }
 
-  if(localStorage.getItem(DEVICE_LOCK)){
-    alert('Este dispositivo já participou.');
-    return;
+  
   }
 
   if(!mapaNomes[nome]){
@@ -193,11 +194,17 @@ function login(){
     return;
   }
 
-  const usuarios=JSON.parse(localStorage.getItem(DEVICE_KEY));
-  usuarios.lista=[...mapaNomes[nome]];
-  usuarios.index=0;
-  usuarios.atual=usuarios.lista[0];
-  localStorage.setItem(DEVICE_KEY,JSON.stringify(usuarios));
+  const usados = JSON.parse(localStorage.getItem(USERS_KEY));
+
+  if(usados[nome]){
+    alert('Esse nome já foi usado.');
+    return;
+  }
+
+  window.usuarioAtual = mapaNomes[nome][0];
+
+  document.getElementById('grid').style.display='grid';
+  document.getElementById('result').innerHTML='';
 
   document.getElementById('grid').style.display='grid';
   document.getElementById('result').innerHTML='';
@@ -216,8 +223,7 @@ function abrirAdmin(){
 
 function resetarEvento(){
   localStorage.removeItem(EVENT_KEY);
-  localStorage.removeItem(DEVICE_KEY);
-  localStorage.removeItem(DEVICE_LOCK);
+  localStorage.removeItem(USERS_KEY);
   location.reload();
 }
 
@@ -236,36 +242,19 @@ function render(){
 
 function pickCard(i){
   const cartas = JSON.parse(localStorage.getItem(EVENT_KEY));
-  const usuarios = JSON.parse(localStorage.getItem(DEVICE_KEY));
-  const pessoa = usuarios.atual;
+  const usados = JSON.parse(localStorage.getItem(USERS_KEY));
 
-  if(!pessoa) return;
-
-  // evita escolher carta já usada
   if(cartas[i].pickedBy) return;
 
-  cartas[i].pickedBy = pessoa;
-  const amigo = cartas[i].amigo;
-
-  // mostra resultado da pessoa atual
-  document.getElementById('result').innerHTML = `🎁 <b>${pessoa}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${amigo}</span>`;
-
-  usuarios.index++;
-
-  if(usuarios.index < usuarios.lista.length){
-    usuarios.atual = usuarios.lista[usuarios.index];
-    setTimeout(()=>{
-      alert('Agora é a vez de ' + usuarios.atual);
-      document.getElementById('result').innerHTML = '';
-    }, 100);
-  } else {
-    localStorage.setItem(DEVICE_LOCK,'true');
-    document.getElementById('grid').style.display='none';
-  }
+  cartas[i].pickedBy = window.usuarioAtual;
+  usados[window.usuarioAtual] = true;
 
   localStorage.setItem(EVENT_KEY, JSON.stringify(cartas));
-  localStorage.setItem(DEVICE_KEY, JSON.stringify(usuarios));
-  render();
+  localStorage.setItem(USERS_KEY, JSON.stringify(usados));
+
+  document.getElementById('grid').style.display='none';
+  document.getElementById('result').innerHTML = `🎁 <b>${window.usuarioAtual}</b>, seu amigo secreto é:<br><span style='color:#a7f3d0'>${cartas[i].amigo}</span>`;
+}
 }
 
 initEvento();
